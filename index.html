@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>perfec.Link.logistics | Shipping & Tracking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --neon: #00d4ff;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .input-field {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            border-color: var(--neon);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+            outline: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.5);
+        }
+        
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+        }
+        
+        .receipt-paper {
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .receipt-paper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #00d4ff, #3b82f6);
+        }
+        
+        .tracking-line {
+            background: linear-gradient(90deg, #3b82f6, #00d4ff);
+            height: 3px;
+            position: relative;
+        }
+        
+        .tracking-dot {
+            width: 16px;
+            height: 16px;
+            background: #3b82f6;
+            border: 3px solid #0f172a;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: all 0.3s ease;
+        }
+        
+        .tracking-dot.active {
+            background: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+            transform: translateY(-50%) scale(1.2);
+        }
+        
+        .status-card {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out forwards;
+        }
+        
+        .barcode {
+            font-family: 'Libre Barcode 39', cursive;
+            font-size: 3rem;
+            letter-spacing: 2px;
+        }
+        
+        .hidden-section {
+            display: none;
+        }
+        
+        .tab-active {
+            border-bottom: 2px solid #00d4ff;
+            color: #00d4ff;
+        }
+        
+        /* Receipt print styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #receipt-section, #receipt-section * {
+                visibility: visible;
+            }
+            #receipt-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="showSection('home')">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-xl tracking-tight">
+                        perfec.Link<span class="text-blue-400">.logistics</span>
+                    </span>
+                </div>
+                
+                <div class="flex space-x-8">
+                    <button onclick="showSection('create')" id="nav-create" class="text-sm font-medium hover:text-blue-400 transition-colors">Create Receipt</button>
+                    <button onclick="showSection('track')" id="nav-track" class="text-sm font-medium hover:text-blue-400 transition-colors">Track Shipment</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Home Section -->
+    <section id="home-section" class="pt-32 pb-20 px-4">
+        <div class="max-w-7xl mx-auto text-center">
+            <div class="animate-slide-in">
+                <h1 class="font-display text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-blue-400 bg-clip-text text-transparent">
+                    Global Logistics<br/>Simplified
+                </h1>
+                <p class="text-xl text-slate-400 mb-12 max-w-2xl mx-auto">
+                    Generate professional shipping receipts and track packages in real-time with our advanced logistics platform.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="showSection('create')" class="btn-primary px-8 py-4 rounded-full font-semibold text-white flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Create New Receipt
+                    </button>
+                    <button onclick="showSection('track')" class="px-8 py-4 rounded-full font-semibold border border-blue-500/30 hover:bg-blue-500/10 transition-all flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Track Package
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-panel p-6 rounded-2xl">
+                    <div class="text-3xl font-bold text-blue-400 mb-2">50K+</div>
+                    <div class="text-slate-400">Shipments Delivered</div>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl">
+                    <div class="text-3xl font-bold text-blue-400 mb-2">120+</div>
+                    <div class="text-slate-400">Countries Served</div>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl">
+                    <div class="text-3xl font-bold text-blue-400 mb-2">99.9%</div>
+                    <div class="text-slate-400">Tracking Accuracy</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Create Receipt Section -->
+    <section id="create-section" class="hidden-section pt-24 pb-20 px-4 min-h-screen">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="font-display text-4xl font-bold mb-4">Create Shipping Receipt</h2>
+                <p class="text-slate-400">Fill in the details below to generate a professional tracking receipt</p>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-8">
+                <!-- Form -->
+                <div class="glass-panel p-8 rounded-2xl space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-300">Sender Name</label>
+                            <input type="text" id="senderName" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="John Doe">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-300">Sender Phone</label>
+                            <input type="tel" id="senderPhone" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="+1 234 567 890">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-300">Sender Address</label>
+                        <textarea id="senderAddress" rows="2" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="123 Main St, City, Country"></textarea>
+                    </div>
+
+                    <div class="border-t border-white/10 pt-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-slate-300">Recipient Name</label>
+                                <input type="text" id="recipientName" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="Jane Smith">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-slate-300">Recipient Phone</label>
+                                <input type="tel" id="recipientPhone" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="+1 987 654 321">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-300">Recipient Address</label>
+                        <textarea id="recipientAddress" rows="2" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="456 Oak Ave, City, Country"></textarea>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-300">Package Weight</label>
+                            <input type="text" id="weight" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="2.5 kg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-300">Dimensions</label>
+                            <input type="text" id="dimensions" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="30x20x15 cm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 text-slate-300">Service Type</label>
+                            <select id="serviceType" class="input-field w-full px-4 py-3 rounded-lg text-white bg-slate-900">
+                                <option value="Express">Express (1-2 days)</option>
+                                <option value="Standard">Standard (3-5 days)</option>
+                                <option value="Economy">Economy (5-10 days)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-slate-300">Description</label>
+                        <input type="text" id="description" class="input-field w-full px-4 py-3 rounded-lg text-white placeholder-slate-500" placeholder="Electronics, Documents, etc.">
+                    </div>
+
+                    <button onclick="generateReceipt()" class="w-full btn-primary py-4 rounded-lg font-semibold text-white mt-4">
+                        Generate Receipt & Tracking Code
+                    </button>
+                </div>
+
+                <!-- Live Preview -->
+                <div id="receipt-preview" class="hidden">
+                    <div class="receipt-paper p-8 rounded-lg max-w-md mx-auto transform rotate-1 hover:rotate-0 transition-transform duration-300">
+                        <div class="border-b-2 border-slate-200 pb-4 mb-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-display font-bold text-2xl text-slate-800">perfec.Link</h3>
+                                    <p class="text-sm text-slate-500">.logistics</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-slate-500">Tracking #</div>
+                                    <div class="font-mono font-bold text-blue-600" id="preview-tracking"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Date:</span>
+                                <span class="font-medium" id="preview-date"></span>
+                            </div>
+                            
+                            <div class="bg-slate-50 p-3 rounded">
+                                <div class="text-xs text-slate-500 mb-1">FROM:</div>
+                                <div class="font-medium" id="preview-sender"></div>
+                                <div class="text-slate-600 text-xs mt-1" id="preview-sender-address"></div>
+                            </div>
+
+                            <div class="flex justify-center">
+                                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                                </svg>
+                            </div>
+
+                            <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                                <div class="text-xs text-blue-600 mb-1">TO:</div>
+                                <div class="font-medium text-slate-800" id="preview-recipient"></div>
+                                <div class="text-slate-600 text-xs mt-1" id="preview-recipient-address"></div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 pt-2">
+                                <div>
+                                    <div class="text-xs text-slate-500">Weight</div>
+                                    <div class="font-medium" id="preview-weight"></div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-slate-500">Service</div>
+                                    <div class="font-medium text-blue-600" id="preview-service"></div>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-slate-200 pt-4 mt-4">
+                                <div id="qrcode" class="flex justify-center mb-2"></div>
+                                <div class="text-center text-xs text-slate-400">Scan to track shipment</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex gap-4 justify-center">
+                        <button onclick="printReceipt()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors">
+                            Print Receipt
+                        </button>
+                        <button onclick="downloadPDF()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">
+                            Download PDF
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="empty-preview" class="flex items-center justify-center h-full min-h-[400px]">
+                    <div class="text-center text-slate-500">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <p>Fill the form to generate receipt preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Track Section -->
+    <section id="track-section" class="hidden-section pt-24 pb-20 px-4 min-h-screen">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="font-display text-4xl font-bold mb-4">Track Your Shipment</h2>
+                <p class="text-slate-400">Enter your tracking number to see real-time updates</p>
+            </div>
+
+            <div class="glass-panel p-2 rounded-2xl mb-8 max-w-2xl mx-auto">
+                <div class="flex gap-2">
+                    <input type="text" id="trackingInput" placeholder="Enter tracking number (e.g., PFL-2024-XXXXX)" 
+                           class="flex-1 bg-transparent border-none px-6 py-4 text-white placeholder-slate-500 focus:outline-none text-lg font-mono">
+                    <button onclick="trackPackage()" class="btn-primary px-8 py-4 rounded-xl font-semibold text-white">
+                        Track
+                    </button>
+                </div>
+            </div>
+
+            <div id="tracking-result" class="hidden">
+                <div class="glass-panel rounded-2xl p-8 mb-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-6 border-b border-white/10">
+                        <div>
+                            <div class="text-sm text-slate-400 mb-1">Tracking Number</div>
+                            <div class="font-mono text-2xl font-bold text-blue-400" id="result-tracking"></div>
+                        </div>
+                        <div class="mt-4 md:mt-0 text-right">
+                            <div class="text-sm text-slate-400 mb-1">Status</div>
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                                <span class="font-semibold" id="result-status">In Transit</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="relative mb-12 px-4">
+                        <div class="tracking-line w-full rounded-full"></div>
+                        <div class="tracking-dot active" style="left: 0%"></div>
+                        <div class="tracking-dot" style="left: 25%"></div>
+                        <div class="tracking-dot" style="left: 50%"></div>
+                        <div class="tracking-dot" style="left: 75%"></div>
+                        <div class="tracking-dot" style="left: 100%"></div>
+                        
+                        <div class="flex justify-between mt-6 text-xs text-slate-400">
+                            <span class="text-blue-400 font-medium">Picked Up</span>
+                            <span>Processing</span>
+                            <span>In Transit</span>
+                            <span>Out for Delivery</span>
+                            <span>Delivered</span>
+                        </div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="space-y-4" id="timeline-container">
+                        <!-- Dynamic timeline items -->
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4 text-slate-300">Shipment Details</h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Service:</span>
+                                <span class="text-slate-300" id="detail-service">Express</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Weight:</span>
+                                <span class="text-slate-300" id="detail-weight">2.5 kg</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Estimated Delivery:</span>
+                                <span class="text-blue-400 font-medium" id="detail-eta">Tomorrow by 8:00 PM</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-panel p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4 text-slate-300">Route</h3>
+                        <div class="flex items-center gap-4 text-sm">
+                            <div class="flex-1">
+                                <div class="text-slate-500 text-xs mb-1">Origin</div>
+                                <div class="text-slate-300 font-medium" id="detail-origin">New York, NY</div>
+                            </div>
+                            <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                            <div class="flex-1 text-right">
+                                <div class="text-slate-500 text-xs mb-1">Destination</div>
+                                <div class="text-slate-300 font-medium" id="detail-dest">Los Angeles, CA</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="no-result" class="hidden text-center py-12">
+                <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
+                    <svg class="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-300 mb-2">Tracking Number Not Found</h3>
+                <p class="text-slate-500">Please check the number and try again</p>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Database to store shipments (in-memory)
+        let shipments = JSON.parse(localStorage.getItem('shipments')) || {};
+        let currentReceipt = null;
+
+        // Initialize with sample data if empty
+        if (Object.keys(shipments).length === 0) {
+            const sampleTracking = 'PFL-2024-' + Math.random().toString(36).substr(2, 5).toUpperCase();
+            shipments[sampleTracking] = {
+                tracking: sampleTracking,
+                sender: { name: 'Demo Sender', phone: '+1 555 0100', address: '123 Sample St, New York, NY' },
+                recipient: { name: 'Demo Recipient', phone: '+1 555 0200', address: '456 Example Ave, Los Angeles, CA' },
+                details: { weight: '3.2 kg', dimensions: '40x30x20 cm', service: 'Express', description: 'Sample Package' },
+                date: new Date().toISOString(),
+                status: 'In Transit',
+                timeline: [
+                    { time: '2 hours ago', location: 'Los Angeles, CA', status: 'Arrived at sorting facility', completed: true },
+                    { time: '5 hours ago', location: 'Phoenix, AZ', status: 'Departed facility', completed: true },
+                    { time: 'Yesterday', location: 'New York, NY', status: 'Picked up', completed: true }
+                ]
+            };
+            localStorage.setItem('shipments', JSON.stringify(shipments));
+        }
+
+        function showSection(section) {
+            // Hide all sections
+            document.getElementById('home-section').classList.add('hidden-section');
+            document.getElementById('create-section').classList.add('hidden-section');
+            document.getElementById('track-section').classList.add('hidden-section');
+            
+            // Show selected
+            document.getElementById(section + '-section').classList.remove('hidden-section');
+            
+            // Update nav
+            document.getElementById('nav-create').classList.remove('tab-active');
+            document.getElementById('nav-track').classList.remove('tab-active');
+            if (section !== 'home') {
+                document.getElementById('nav-' + section).classList.add('tab-active');
+            }
+            
+            window.scrollTo(0, 0);
+        }
+
+        function generateTrackingNumber() {
+            const date = new Date();
+            const year = date.getFullYear();
+            const random = Math.random().toString(36).substr(2, 5).toUpperCase();
+            return `PFL-${year}-${random}`;
+        }
+
+        function generateReceipt() {
+            const sender = {
+                name: document.getElementById('senderName').value,
+                phone: document.getElementById('senderPhone').value,
+                address: document.getElementById('senderAddress').value
+            };
+            
+            const recipient = {
+                name: document.getElementById('recipientName').value,
+                phone: document.getElementById('recipientPhone').value,
+                address: document.getElementById('recipientAddress').value
+            };
+            
+            const details = {
+                weight: document.getElementById('weight').value,
+                dimensions: document.getElementById('dimensions').value,
+                service: document.getElementById('serviceType').value,
+                description: document.getElementById('description').value
+            };
+
+            if (!sender.name || !recipient.name || !sender.address || !recipient.address) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const tracking = generateTrackingNumber();
+            const shipment = {
+                tracking,
+                sender,
+                recipient,
+                details,
+                date: new Date().toISOString(),
+                status: 'Picked Up',
+                timeline: [
+                    { time: 'Just now', location: sender.address.split(',').pop().trim(), status: 'Shipment created - Label generated', completed: true }
+                ]
+            };
+
+            // Save to database
+            shipments[tracking] = shipment;
+            localStorage.setItem('shipments', JSON.stringify(shipments));
+            currentReceipt = shipment;
+
+            // Update preview
+            document.getElementById('preview-tracking').textContent = tracking;
+            document.getElementById('preview-date').textContent = new Date().toLocaleDateString();
+            document.getElementById('preview-sender').textContent = sender.name;
+            document.getElementById('preview-sender-address').textContent = sender.address;
+            document.getElementById('preview-recipient').textContent = recipient.name;
+            document.getElementById('preview-recipient-address').textContent = recipient.address;
+            document.getElementById('preview-weight').textContent = details.weight;
+            document.getElementById('preview-service').textContent = details.service;
+
+            // Generate QR Code
+            document.getElementById('qrcode').innerHTML = '';
+            new QRCode(document.getElementById('qrcode'), {
+                text: window.location.origin + '?track=' + tracking,
+                width: 128,
+                height: 128,
+                colorDark: '#1e293b',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // Show preview
+            document.getElementById('empty-preview').classList.add('hidden');
+            document.getElementById('receipt-preview').classList.remove('hidden');
+            
+            // Scroll to preview
+            document.getElementById('receipt-preview').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function printReceipt() {
+            window.print();
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFontSize(20);
+            doc.text('perfec.Link.logistics', 20, 30);
+            doc.setFontSize(12);
+            doc.text(`Tracking: ${currentReceipt.tracking}`, 20, 45);
+            doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 55);
+            
+            doc.text('FROM:', 20, 75);
+            doc.text(currentReceipt.sender.name, 20, 85);
+            doc.text(currentReceipt.sender.address, 20, 95);
+            
+            doc.text('TO:', 20, 115);
+            doc.text(currentReceipt.recipient.name, 20, 125);
+            doc.text(currentReceipt.recipient.address, 20, 135);
+            
+            doc.text(`Service: ${currentReceipt.details.service}`, 20, 155);
+            doc.text(`Weight: ${currentReceipt.details.weight}`, 20, 165);
+            
+            doc.save(`receipt-${currentReceipt.tracking}.pdf`);
+        }
+
+        function trackPackage() {
+            const input = document.getElementById('trackingInput').value.trim();
+            const tracking = input.toUpperCase();
+            
+            const shipment = shipments[tracking];
+            
+            if (!shipment) {
+                document.getElementById('tracking-result').classList.add('hidden');
+                document.getElementById('no-result').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('no-result').classList.add('hidden');
+            document.getElementById('tracking-result').classList.remove('hidden');
+            
+            document.getElementById('result-tracking').textContent = shipment.tracking;
+            document.getElementById('result-status').textContent = shipment.status;
+            document.getElementById('detail-service').textContent = shipment.details.service;
+            document.getElementById('detail-weight').textContent = shipment.details.weight;
+            document.getElementById('detail-origin').textContent = shipment.sender.address.split(',').pop().trim();
+            document.getElementById('detail-dest').textContent = shipment.recipient.address.split(',').pop().trim();
+            
+            // Calculate ETA based on service
+            const eta = new Date();
+            if (shipment.details.service === 'Express') eta.setDate(eta.getDate() + 1);
+            else if (shipment.details.service === 'Standard') eta.setDate(eta.getDate() + 3);
+            else eta.setDate(eta.getDate() + 7);
+            document.getElementById('detail-eta').textContent = eta.toLocaleDateString();
+
+            // Update timeline
+            const timelineContainer = document.getElementById('timeline-container');
+            timelineContainer.innerHTML = '';
+            
+            shipment.timeline.forEach((event, index) => {
+                const div = document.createElement('div');
+                div.className = 'status-card p-4 rounded-lg flex gap-4 items-start';
+                div.innerHTML = `
+                    <div class="w-12 text-right text-xs text-slate-500 pt-1">${event.time}</div>
+                    <div class="flex-1">
+                        <div class="font-medium text-slate-200">${event.status}</div>
+                        <div class="text-sm text-slate-500">${event.location}</div>
+                    </div>
+                `;
+                timelineContainer.appendChild(div);
+            });
+
+            // Update progress dots based on status
+            const dots = document.querySelectorAll('.tracking-dot');
+            const statusMap = ['Picked Up', 'Processing', 'In Transit', 'Out for Delivery', 'Delivered'];
+            const statusIndex = statusMap.indexOf(shipment.status) || 2;
+            
+            dots.forEach((dot, index) => {
+                if (index <= statusIndex) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
+        }
+
+        // Check for URL params (direct tracking)
+        window.onload = function() {
+            const params = new URLSearchParams(window.location.search);
+            const trackParam = params.get('track');
+            if (trackParam) {
+                showSection('track');
+                document.getElementById('trackingInput').value = trackParam;
+                trackPackage();
+            }
+        };
+    </script>
+</body>
+</html>
